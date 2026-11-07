@@ -1,72 +1,93 @@
-import { getDeviceId } from '@/lib/deviceId';
-import type { ChatMessage, Conversation } from '@/types/orlina';
+﻿import type { ChatMessage, Conversation } from '@/types/orlina';
 
-const SUPABASE_URL: string | undefined = import.meta.env.VITE_SUPABASE_URL;
-const ANON_KEY: string | undefined = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const NOT_CONFIGURED = 'ORLINA is not connected to its database yet. Check the Supabase connection and reload.';
-const INVALID_RESPONSE = 'ORLINA returned an unexpected response. Please try again.';
+const API_BASE_URL = (
+  import.meta.env.VITE_ORLINA_API_URL || 'http://localhost:5000'
+).replace(/\/+$/, '');
 
-type RequestBody = Record<string, unknown>;
+const USER_ID = 'u1';
+const pendingMessages = new Map<string, string>();
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-async function callChatFunction(body: RequestBody): Promise<unknown> {
-  if (!SUPABASE_URL || !ANON_KEY) throw new Error(NOT_CONFIGURED);
+async function apiRequest(path: string, options: RequestInit = {}): Promise<unknown> {
   let response: Response;
+
   try {
-    response = await fetch(`${SUPABASE_URL}/functions/v1/orlina-chat`, {
-      method: 'POST',
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
       headers: {
         'Content-Type': 'application/json',
-        apikey: ANON_KEY,
-        Authorization: `Bearer ${ANON_KEY}`,
+        ...options.headers,
       },
-      body: JSON.stringify({ ...body, deviceId: getDeviceId() }),
     });
   } catch {
-    throw new Error('We could not reach ORLINA. Check your connection and try again.');
+    throw new Error('Cannot reach ORLINA backend. Check that the backend is running.');
   }
 
   const data: unknown = await response.json().catch(() => null);
+
   if (!response.ok) {
-    const message = isRecord(data) && typeof data.error === 'string' ? data.error : `Request failed (${response.status}).`;
+    const message =
+      typeof data === 'object' && data !== null && 'error' in data
+        ? String(data.error)
+        : `Request failed (${response.status}).`;
     throw new Error(message);
   }
+
   return data;
 }
 
-function parseMessage(value: unknown): ChatMessage {
-  if (!isRecord(value)) throw new Error(INVALID_RESPONSE);
-  const { id, text, createdAt } = value;
-  const role = value.role;
-  if (typeof id !== 'string' || typeof text !== 'string' || typeof createdAt !== 'string') throw new Error(INVALID_RESPONSE);
-  if (role !== 'user' && role !== 'assistant') throw new Error(INVALID_RESPONSE);
-  return { id, role, text, createdAt };
-}
-
-function parseConversation(value: unknown): Conversation {
-  if (!isRecord(value)) throw new Error(INVALID_RESPONSE);
-  const { id, title, updatedAt, messages } = value;
-  if (typeof id !== 'string' || typeof title !== 'string' || typeof updatedAt !== 'string' || !Array.isArray(messages)) {
-    throw new Error(INVALID_RESPONSE);
-  }
-  return { id, title, updatedAt, messages: messages.map(parseMessage) };
-}
-
 export async function listConversations(): Promise<Conversation[]> {
-  const data = await callChatFunction({ action: 'list' });
-  if (!isRecord(data) || !Array.isArray(data.conversations)) throw new Error(INVALID_RESPONSE);
-  return data.conversations.map(parseConversation);
+  const data = await apiRequest(`/api/conversations?userId=${USER_ID}`);
+
+  if (!Array.isArray(data)) {
+    throw new Error('ORLINA returned an unexpected conversation list.');
+  }
+
+  return data.map((item) => {
+    const conversation = item as Record<string, unknown>;
+
+    return {
+      id: String(conversation.id),
+      title: String(conversation.title || 'New conversation'),
+      updatedAt: String(conversation.created_at || new Date().toISOString()),
+      messages: [],
+    };
+  });
 }
 
-export async function saveUserMessage(conversationId: string, messageId: string, text: string): Promise<void> {
-  await callChatFunction({ action: 'send', conversationId, messageId, text });
+export async function saveUserMessage(
+  conversationId: string,
+  _messageId: string,
+  text: string,
+): Promise<void> {
+  pendingMessages.set(conversationId, text);
 }
 
 export async function requestReply(conversationId: string): Promise<ChatMessage> {
-  const data = await callChatFunction({ action: 'reply', conversationId });
-  if (!isRecord(data)) throw new Error(INVALID_RESPONSE);
-  return parseMessage(data.message);
+  const message = pendingMessages.get(conversationId);
+
+  if (!message) {
+    throw new Error('Message not found. Please send it again.');
+  }
+
+  const data = await apiRequest('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: USER_ID,
+      conversationId,
+      message,
+    }),
+  });
+
+  if (typeof data !== 'object' || data === null || !('reply' in data)) {
+    throw new Error('ORLINA returned an unexpected reply.');
+  }
+
+  pendingMessages.delete(conversationId);
+
+  return {
+    id: `assistant-${Date.now()}`,
+    role: 'assistant',
+    text: String(data.reply),
+    createdAt: new Date().toISOString(),
+  };
 }

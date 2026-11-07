@@ -1,4 +1,4 @@
-// ORLINA backend - integration hub (Member 4)
+﻿// ORLINA backend - integration hub (Member 4)
 // Flow for every chat message: Memory agent (recall) -> Conversation agent (Claude)
 //   -> Memory agent (retain) -> Decision agent (if a decision is detected).
 // Every external service has a fallback, so the demo never crashes.
@@ -526,8 +526,11 @@ api.delete("/conversations/:id", (req, res) => {
 api.post("/chat", async (req, res) => {
   const { conversationId, message, style } = req.body || {};
   if (!conversationId || !message || !String(message).trim()) return res.status(400).json({ error: "conversationId and message are required" });
-  const c = DB.conversations.find((x) => x.id === conversationId);
-  if (!c) return res.status(404).json({ error: "Conversation not found" });
+  let c = DB.conversations.find((x) => x.id === conversationId);
+  if (!c) {
+    c = { id: conversationId, userId: req.body.userId || "u1", title: "New conversation", messages: [], summary: "", createdAt: now() };
+    DB.conversations.push(c);
+  }
   if (c.title === "New conversation") c.title = String(message).slice(0, 40);
   // Reuse the main /chat flow (recall -> Claude -> retain -> decision) by calling it internally.
   const r = await fetch(`http://127.0.0.1:${PORT}/chat`, {
@@ -541,3 +544,4 @@ app.use("/api", api);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Orlina backend on :${PORT}  (Claude: ${!!process.env.ANTHROPIC_API_KEY ? "on" : "stub"}, Hindsight: ${hs ? "on" : "local fallback"})`));
+
