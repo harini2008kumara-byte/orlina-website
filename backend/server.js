@@ -52,35 +52,60 @@ async function askOpenAICompatible({ system, user, json, fallback }) {
     return { data: fallback, mode: "stub", error: e.message };
   }
 }
+
 async function ask({ system, user, json = false, fallback, max = 1200 }) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    if (process.env.AI_BASE_URL && process.env.AI_MODEL) return askOpenAICompatible({ system, user, json, fallback });
+  if (!process.env.GEMINI_API_KEY) {
     return { data: fallback, mode: "stub" };
   }
+
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: max,
-        system: json ? system + "\nReturn ONLY valid JSON. No markdown, no preamble." : system,
-        messages: [{ role: "user", content: user }],
-      }),
-    });
-    if (!r.ok) throw new Error(`Claude HTTP ${r.status}`);
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: system }]
+          },
+          contents: [{
+            role: "user",
+            parts: [{ text: user }]
+          }],
+          generationConfig: {
+            maxOutputTokens: max,
+            ...(json ? { responseMimeType: "application/json" } : {})
+          }
+        })
+      }
+    );
+
+    if (!r.ok) {
+      const errorBody = await r.text();
+      throw new Error(`Gemini HTTP ${r.status}: ${errorBody}`);
+    }
+
     const d = await r.json();
-    const text = d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
-    return { data: json ? parseJSON(text) : text, mode: "claude" };
+    const text = d.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("\n");
+
+    if (!text) throw new Error("Gemini returned an empty response");
+
+    return {
+      data: json ? parseJSON(text) : text,
+      mode: "gemini"
+    };
+
   } catch (e) {
-    console.error("Claude error:", e.message);
+    console.error("Gemini error:", e.message);
     return { data: fallback, mode: "stub", error: e.message };
   }
 }
+
 
 // ---------- Hindsight (Member 3 can replace/extend this) ----------
 let hs = null;
