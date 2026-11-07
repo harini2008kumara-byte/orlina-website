@@ -1,0 +1,2 @@
+[functions.orlina-chat]
+verify_jwt = false

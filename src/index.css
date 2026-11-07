@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-canvas: 6 7 11;
+  --color-surface: 13 14 21;
+  --color-panel: 20 22 33;
+  --color-input: 16 18 28;
+  --color-line: 40 44 62;
+  --color-accent: 138 107 255;
+  --color-mint: 184 166 255;
+  --color-mist: 214 205 255;
+  --color-ink: 201 210 220;
+  --color-muted: 150 160 176;
+  --color-on-accent: 6 7 11;
+  --color-warning: 232 184 101;
+  --color-danger: 242 139 130;
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas font-sans text-ink antialiased leading-normal;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display leading-[1.2] tracking-tight text-ink;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-mint));
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgb(var(--color-accent) / 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
