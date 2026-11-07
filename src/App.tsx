@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { CookieNotice } from '@/components/layout/CookieNotice';
@@ -6,6 +7,7 @@ import { ConversationsPage } from '@/pages/ConversationsPage';
 import { LegalPage } from '@/pages/LegalPage';
 import { MemoryMapPage } from '@/pages/MemoryMapPage';
 import { MemoryPage } from '@/pages/MemoryPage';
+import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -24,8 +26,9 @@ function renderView(item: NavItem) {
 }
 
 function App() {
+  const pathname = window.location.pathname.replace(/\/$/, '') || '/';
   const activeItem = useActiveView();
-  const legalDocument = LEGAL_DOCUMENTS[window.location.pathname.replace(/\/$/, '')];
+  const legalDocument = LEGAL_DOCUMENTS[pathname];
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -34,6 +37,10 @@ function App() {
   useEffect(() => {
     if (activeItem) document.title = `${activeItem.label} | ORLINA`;
   }, [activeItem]);
+
+  if (pathname === '/login' || pathname === '/register') {
+    return <LoginPage />;
+  }
 
   if (legalDocument) {
     return (
