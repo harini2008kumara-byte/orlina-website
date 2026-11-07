@@ -1,4 +1,5 @@
-import { PanelLeftClose, PanelLeftOpen, ShieldCheck, X } from 'lucide-react';
+
+import { PanelLeftClose, PanelLeftOpen, ShieldCheck, X, Sparkles } from 'lucide-react';
 import { NAV_ITEMS, viewHref } from '@/config/navigation';
 import { cn } from '@/lib/cn';
 import { Wordmark } from '@/components/brand/Wordmark';
@@ -12,20 +13,29 @@ interface SidebarProps {
 }
 
 const ICON_BUTTON_CLASSES =
-  'grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted transition-colors duration-200 hover:bg-panel hover:text-ink';
+  'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-muted transition-all hover:bg-white/10 hover:text-white';
 
-export function Sidebar({ activePath, collapsed, mobileOpen, onToggleCollapsed, onClose }: SidebarProps) {
+export function Sidebar({
+  activePath,
+  collapsed,
+  mobileOpen,
+  onToggleCollapsed,
+  onClose,
+}: SidebarProps) {
   return (
     <aside
       aria-label="Primary"
       className={cn(
-        'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-surface transition-[transform,width] duration-300 ease-out',
+        'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/10 bg-[#0c0d19]/95 shadow-[15px_0_60px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-[transform,width] duration-300',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0',
         collapsed ? 'lg:w-20' : 'lg:w-60',
       )}
     >
-      <div className={cn('flex h-16 shrink-0 items-center justify-between gap-2 border-b border-line px-5', collapsed && 'lg:justify-center lg:px-0')}>
+      <div className={cn(
+        'flex h-20 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-5',
+        collapsed && 'lg:justify-center lg:px-0'
+      )}>
         <a
           href={viewHref('overview')}
           onClick={onClose}
@@ -34,9 +44,16 @@ export function Sidebar({ activePath, collapsed, mobileOpen, onToggleCollapsed, 
         >
           <Wordmark />
         </a>
-        <button type="button" onClick={onClose} aria-label="Close navigation" className={cn(ICON_BUTTON_CLASSES, 'lg:hidden')}>
-          <X className="h-5 w-5" aria-hidden="true" />
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close navigation"
+          className={cn(ICON_BUTTON_CLASSES, 'lg:hidden')}
+        >
+          <X className="h-5 w-5" />
         </button>
+
         <button
           type="button"
           onClick={onToggleCollapsed}
@@ -44,14 +61,23 @@ export function Sidebar({ activePath, collapsed, mobileOpen, onToggleCollapsed, 
           aria-expanded={!collapsed}
           className={cn(ICON_BUTTON_CLASSES, 'hidden lg:grid')}
         >
-          {collapsed ? <PanelLeftOpen className="h-5 w-5" aria-hidden="true" /> : <PanelLeftClose className="h-5 w-5" aria-hidden="true" />}
+          {collapsed
+            ? <PanelLeftOpen className="h-5 w-5" />
+            : <PanelLeftClose className="h-5 w-5" />}
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <div className={cn('px-5 pt-7 pb-3', collapsed && 'lg:hidden')}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+          Workspace
+        </p>
+      </div>
+
+      <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
         {NAV_ITEMS.map((item) => {
           const isActive = item.path === activePath;
           const Icon = item.icon;
+
           return (
             <a
               key={item.path}
@@ -60,25 +86,45 @@ export function Sidebar({ activePath, collapsed, mobileOpen, onToggleCollapsed, 
               aria-current={isActive ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
               className={cn(
-                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200',
-                isActive ? 'bg-panel text-mint shadow-clay' : 'text-muted hover:bg-panel/60 hover:text-ink',
+                'group relative flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition-all duration-200',
+                isActive
+                  ? 'border-violet-400/25 bg-gradient-to-r from-violet-500/20 via-indigo-500/10 to-transparent text-white shadow-[0_0_25px_rgba(139,92,246,0.12)]'
+                  : 'border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-white',
                 collapsed && 'lg:justify-center lg:px-0',
               )}
             >
-              {isActive && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-mint" aria-hidden="true" />}
+              {isActive && (
+                <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-violet-400 to-blue-400" />
+              )}
               <Icon
-                className={cn('h-5 w-5 shrink-0 transition-colors duration-200', isActive ? 'text-mint' : 'group-hover:text-mint')}
+                className={cn(
+                  'h-5 w-5 shrink-0 transition-all',
+                  isActive ? 'text-violet-300' : 'text-slate-500 group-hover:text-blue-300',
+                )}
                 aria-hidden="true"
               />
-              <span className={cn('truncate', collapsed && 'lg:sr-only')}>{item.label}</span>
+              <span className={cn('truncate', collapsed && 'lg:sr-only')}>
+                {item.label}
+              </span>
             </a>
           );
         })}
       </nav>
 
-      <div className={cn('mx-3 mb-4 flex items-start gap-3 rounded-xl border border-line bg-canvas/60 p-3', collapsed && 'lg:hidden')}>
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-mint" aria-hidden="true" />
-        <p className="text-xs leading-normal text-muted">Your memory is private and only ever used on your behalf.</p>
+      <div className={cn(
+        'mx-3 mb-4 rounded-2xl border border-violet-400/15 bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4',
+        collapsed && 'lg:hidden'
+      )}>
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-violet-300" />
+          <span className="text-xs font-semibold text-violet-200">Your ORLINA space</span>
+        </div>
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
+          <p className="text-xs leading-relaxed text-slate-400">
+            Your conversations deserve a thoughtful and private space.
+          </p>
+        </div>
       </div>
     </aside>
   );
