@@ -1,0 +1,23 @@
+# Put this file at the ROOT of the orlina-website repo (next to the backend/ folder).
+# Render: New > Blueprint > pick the repo. Secrets (sync: false) are typed in Render's dashboard, never in GitHub.
+services:
+  - type: web
+    name: orlina-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    branch: backend-setup   # change to main after the pull request is merged
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: HINDSIGHT_API_URL
+        value: https://api.hindsight.vectorize.io
+      - key: HINDSIGHT_BANK_ID
+        value: anvaya-memory
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-5-5
+      - key: HINDSIGHT_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
